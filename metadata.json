@@ -1,0 +1,7 @@
+{
+  "name": "IA Career Landing",
+  "description": "Una landing page para elegir itinerarios de aprendizaje de Inteligencia Artificial.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
