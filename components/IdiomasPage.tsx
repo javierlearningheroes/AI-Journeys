@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
-import { 
-  ArrowLeft, Mic, MicOff, PhoneOff, Compass, 
+import {
+  ArrowLeft, Mic, MicOff, PhoneOff, Compass,
   MessageCircle, Loader2, Languages
 } from "lucide-react";
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
@@ -88,7 +88,7 @@ export const IdiomasPage: React.FC<IdiomasPageProps> = ({ onBack }) => {
   const [streamingUserText, setStreamingUserText] = useState("");
   const [streamingModelText, setStreamingModelText] = useState("");
   const [isMuted, setIsMuted] = useState(false);
-  
+
   const inputAudioCtx = useRef<AudioContext | null>(null);
   const outputAudioCtx = useRef<AudioContext | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -116,7 +116,11 @@ export const IdiomasPage: React.FC<IdiomasPageProps> = ({ onBack }) => {
       analyserRef.current = inputAudioCtx.current.createAnalyser();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+      const { getGeminiApiKey } = await import("../services/geminiService");
+      const apiKey = getGeminiApiKey();
+
+      const ai = new GoogleGenAI({ apiKey });
       const prompt = `You are "Alex", a friendly bilingual English tutor. Student level: ${config.level}. Conduct sessions primarily in English. Switch to Spanish naturally ONLY if the student is stuck. ${config.mode === LearningMode.GUIDED ? `Context: Industry ${config.industry}, Scenario ${config.niche}.` : 'Casual conversation.'}`;
       const sessionPromise = ai.live.connect({
         model: 'gemini-2.5-flash-native-audio-preview-09-2025',
@@ -174,7 +178,7 @@ export const IdiomasPage: React.FC<IdiomasPageProps> = ({ onBack }) => {
               source.onended = () => sourcesRef.current.delete(source);
             }
             if (msg.serverContent?.interrupted) {
-              sourcesRef.current.forEach(s => { try { s.stop(); } catch(e) {} });
+              sourcesRef.current.forEach(s => { try { s.stop(); } catch (e) { } });
               sourcesRef.current.clear();
               nextStartTimeRef.current = 0;
               modelAccumulator.current = ""; setStreamingModelText("");
@@ -190,7 +194,7 @@ export const IdiomasPage: React.FC<IdiomasPageProps> = ({ onBack }) => {
 
   const cleanup = () => {
     streamRef.current?.getTracks().forEach(t => t.stop());
-    sourcesRef.current.forEach(s => { try { s.stop(); } catch(e) {} });
+    sourcesRef.current.forEach(s => { try { s.stop(); } catch (e) { } });
     inputAudioCtx.current?.close();
     outputAudioCtx.current?.close();
     setMessages([]); setStreamingUserText(""); setStreamingModelText("");
@@ -213,10 +217,10 @@ export const IdiomasPage: React.FC<IdiomasPageProps> = ({ onBack }) => {
             </div>
           )}
         </div>
-        <img 
-          src="https://www.learningheroes.com/_ipx/q_80/images/Logo.svg" 
-          className="h-8 md:h-10 w-auto invert brightness-0" 
-          alt="Learning Heroes" 
+        <img
+          src="https://www.learningheroes.com/_ipx/q_80/images/Logo.svg"
+          className="h-8 md:h-10 w-auto invert brightness-0"
+          alt="Learning Heroes"
         />
       </header>
 
@@ -253,7 +257,7 @@ export const IdiomasPage: React.FC<IdiomasPageProps> = ({ onBack }) => {
             </div>
             <div className="grid md:grid-cols-2 gap-8">
               <button onClick={() => setConfig({ ...config, mode: LearningMode.FREE_STYLE })} className={`p-10 rounded-[40px] border transition-all text-left space-y-6 ${config.mode === LearningMode.FREE_STYLE ? 'border-black bg-white shadow-xl' : 'border-gray-100 bg-gray-50'}`}>
-                <div className="w-16 h-16 bg-black rounded-3xl flex items-center justify-center text-white"><MessageCircle size={32}/></div>
+                <div className="w-16 h-16 bg-black rounded-3xl flex items-center justify-center text-white"><MessageCircle size={32} /></div>
                 <div>
                   <h3 className="text-2xl font-bold">Free Style</h3>
                   <p className="text-gray-400">Conversación abierta y dinámica. El profesor guiará la charla de forma natural.</p>
@@ -261,7 +265,7 @@ export const IdiomasPage: React.FC<IdiomasPageProps> = ({ onBack }) => {
               </button>
               <div className={`p-10 rounded-[40px] border transition-all text-left space-y-6 ${config.mode === LearningMode.GUIDED ? 'border-black bg-white shadow-xl' : 'border-gray-100 bg-gray-50'}`}>
                 <button onClick={() => setConfig({ ...config, mode: LearningMode.GUIDED })} className="w-full text-left space-y-6">
-                  <div className="w-16 h-16 bg-blue-600 rounded-3xl flex items-center justify-center text-white"><Compass size={32}/></div>
+                  <div className="w-16 h-16 bg-blue-600 rounded-3xl flex items-center justify-center text-white"><Compass size={32} /></div>
                   <div>
                     <h3 className="text-2xl font-bold">Guided Practice</h3>
                     <p className="text-gray-400">Enfocado en objetivos. Practica vocabulario técnico o situaciones concretas.</p>
@@ -269,8 +273,8 @@ export const IdiomasPage: React.FC<IdiomasPageProps> = ({ onBack }) => {
                 </button>
                 {config.mode === LearningMode.GUIDED && (
                   <div className="space-y-4 pt-4 animate-in slide-in-from-top-4 duration-300">
-                    <input type="text" placeholder="Industria (Ej: IT, Medicina...)" className="w-full p-4 bg-gray-50 rounded-2xl border border-gray-200 outline-none text-sm" onChange={e => setConfig({...config, industry: e.target.value})} />
-                    <input type="text" placeholder="Escenario (Ej: Entrevista, Venta...)" className="w-full p-4 bg-gray-50 rounded-2xl border border-gray-200 outline-none text-sm" onChange={e => setConfig({...config, niche: e.target.value})} />
+                    <input type="text" placeholder="Industria (Ej: IT, Medicina...)" className="w-full p-4 bg-gray-50 rounded-2xl border border-gray-200 outline-none text-sm" onChange={e => setConfig({ ...config, industry: e.target.value })} />
+                    <input type="text" placeholder="Escenario (Ej: Entrevista, Venta...)" className="w-full p-4 bg-gray-50 rounded-2xl border border-gray-200 outline-none text-sm" onChange={e => setConfig({ ...config, niche: e.target.value })} />
                   </div>
                 )}
               </div>
@@ -285,7 +289,7 @@ export const IdiomasPage: React.FC<IdiomasPageProps> = ({ onBack }) => {
               <div className="absolute -right-20 -top-20 w-64 h-64 bg-blue-600/20 blur-[100px] rounded-full"></div>
               <div className="relative z-10 space-y-6 w-full">
                 <div className="w-24 h-24 bg-white/10 rounded-full flex items-center justify-center mx-auto border border-white/20 backdrop-blur-md">
-                   {status === 'connecting' ? <Loader2 size={40} className="animate-spin text-white"/> : <Languages size={40} />}
+                  {status === 'connecting' ? <Loader2 size={40} className="animate-spin text-white" /> : <Languages size={40} />}
                 </div>
                 <div className="space-y-2">
                   <h3 className="text-3xl font-bold tracking-tight">Profesor Alex</h3>
@@ -294,43 +298,43 @@ export const IdiomasPage: React.FC<IdiomasPageProps> = ({ onBack }) => {
                 <Visualizer analyser={analyserRef.current} isActive={status === 'connected' && !isMuted} />
                 <div className="flex justify-center gap-4">
                   <button onClick={() => setIsMuted(!isMuted)} className={`p-4 rounded-2xl transition-all ${isMuted ? 'bg-red-500 text-white' : 'bg-white/10 hover:bg-white/20'}`}>
-                    {isMuted ? <MicOff size={24}/> : <Mic size={24}/>}
+                    {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
                   </button>
                   <button onClick={cleanup} className="p-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl shadow-xl">
-                    <PhoneOff size={24}/>
+                    <PhoneOff size={24} />
                   </button>
                 </div>
               </div>
             </div>
 
             <div className="bg-gray-50 rounded-[40px] p-8 border border-gray-100 flex-1 min-h-[300px] max-h-[500px] flex flex-col overflow-hidden">
-               <h4 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-6 flex items-center gap-2">
-                 <Languages size={14}/> Transcripción en tiempo real (Beta)
-               </h4>
-               <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar scroll-smooth">
-                 {messages.length === 0 && !streamingUserText && !streamingModelText && <p className="text-center text-gray-300 py-12 italic">Comienza a hablar para ver la transcripción...</p>}
-                 {messages.map(m => (
-                   <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                     <div className={`max-w-[80%] p-4 rounded-3xl text-sm shadow-sm ${m.role === 'user' ? 'bg-black text-white rounded-tr-none' : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'}`}>
-                        {m.text}
-                     </div>
-                   </div>
-                 ))}
-                 {streamingUserText && (
-                   <div className="flex justify-end animate-in fade-in slide-in-from-right-2">
-                     <div className="max-w-[80%] p-4 rounded-3xl text-sm bg-gray-900/80 text-white rounded-tr-none italic border border-gray-700 shadow-inner">
-                        {streamingUserText}
-                     </div>
-                   </div>
-                 )}
-                 {streamingModelText && (
-                   <div className="flex justify-start animate-in fade-in slide-in-from-left-2">
-                     <div className="max-w-[80%] p-4 rounded-3xl text-sm bg-white/80 text-gray-800 border border-gray-200 rounded-tl-none italic shadow-inner">
-                        {streamingModelText}
-                     </div>
-                   </div>
-                 )}
-               </div>
+              <h4 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-6 flex items-center gap-2">
+                <Languages size={14} /> Transcripción en tiempo real (Beta)
+              </h4>
+              <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar scroll-smooth">
+                {messages.length === 0 && !streamingUserText && !streamingModelText && <p className="text-center text-gray-300 py-12 italic">Comienza a hablar para ver la transcripción...</p>}
+                {messages.map(m => (
+                  <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[80%] p-4 rounded-3xl text-sm shadow-sm ${m.role === 'user' ? 'bg-black text-white rounded-tr-none' : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'}`}>
+                      {m.text}
+                    </div>
+                  </div>
+                ))}
+                {streamingUserText && (
+                  <div className="flex justify-end animate-in fade-in slide-in-from-right-2">
+                    <div className="max-w-[80%] p-4 rounded-3xl text-sm bg-gray-900/80 text-white rounded-tr-none italic border border-gray-700 shadow-inner">
+                      {streamingUserText}
+                    </div>
+                  </div>
+                )}
+                {streamingModelText && (
+                  <div className="flex justify-start animate-in fade-in slide-in-from-left-2">
+                    <div className="max-w-[80%] p-4 rounded-3xl text-sm bg-white/80 text-gray-800 border border-gray-200 rounded-tl-none italic shadow-inner">
+                      {streamingModelText}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

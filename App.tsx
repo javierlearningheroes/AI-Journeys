@@ -72,8 +72,8 @@ const App = () => {
     setTransitioningId(id);
 
     // 1. Animación inicial de la tarjeta al centro (1000ms definidos en CSS)
-    // 2. Espera en el centro (añadimos 1s extra a los 800ms previos -> 1800ms en el centro)
-    // Total tiempo antes de empezar a desvanecer la escena: 2800ms
+    // 2. Espera en el centro (reducida para mejorar respuesta)
+    // Reducimos el tiempo total para que no parezca que el botón no funciona
 
     setTimeout(() => {
       // Empezamos a desvanecer toda la pantalla antes del cambio de vista
@@ -91,7 +91,7 @@ const App = () => {
         setTransitioningId(null);
         setIsFadingOut(false);
       }, 400);
-    }, 2800);
+    }, 800);
   };
 
   const handleVidaOption = (id: string) => {
@@ -124,8 +124,9 @@ const App = () => {
         <div className="w-10"></div>
         <img
           src={logoUrl}
-          className="h-10 md:h-12 w-auto invert brightness-0"
+          className="h-10 md:h-12 w-auto invert brightness-0 cursor-pointer"
           alt="Learning Heroes"
+          onClick={() => setCurrentView("home")}
         />
       </header>
 

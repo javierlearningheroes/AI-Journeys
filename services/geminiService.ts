@@ -19,10 +19,14 @@ import {
   StrategicPlan
 } from "../types";
 
+export const getGeminiApiKey = () => {
+  return process.env.GEMINI_API_KEY || process.env.API_KEY || "";
+};
+
 const getAI = () => {
-  const key = process.env.API_KEY || process.env.GEMINI_API_KEY || "";
+  const key = getGeminiApiKey();
   if (!key) {
-    console.warn("GEMINI_API_KEY is not set. AI features will not work.");
+    console.warn("GEMINI_API_KEY is not set. AI features might not work as expected.");
   }
   return new GoogleGenAI({ apiKey: key });
 };
@@ -34,7 +38,13 @@ try {
 } catch (e) {
   console.error("Failed to initialize GoogleGenAI:", e);
   // Create a dummy object to avoid top-level crashes
-  ai = { models: { generateContent: async () => ({ text: "{}" }) } };
+  ai = {
+    models: {
+      generateContent: async () => ({
+        text: JSON.stringify({ error: "No se pudo conectar con la IA. Verifica tu API Key." })
+      })
+    }
+  };
 }
 
 // --- UTILS ---
@@ -148,38 +158,45 @@ const fileToPart = async (file: File): Promise<Part> => {
 // --- SERVICES ---
 
 export const analyzeIkigai = async (responses: Record<string, string>): Promise<IkigaiAnalysis> => {
-  const prompt = `Actúa como un experto coach de carrera y psicólogo especializado en el concepto Ikigai. 
-  Analiza las siguientes respuestas del usuario que incluyen un perfil básico y las 13 áreas del diagrama de Ikigai.
-  
-  Respuestas del usuario:
-  ${JSON.stringify(responses, null, 2)}
-  
-  Tu objetivo es proporcionar un análisis profundo y, sobre todo, RECOMENDAR uno de estos tres caminos profesionales:
-  - 'empleado': Para perfiles que buscan estabilidad, crecimiento dentro de estructuras existentes o especialización técnica.
-  - 'empresario': Para perfiles con visión de escala, gestión de equipos y optimización de negocios ya en marcha.
-  - 'emprendedor': Para perfiles que necesitan crear desde cero, innovar y asumir riesgos altos para validar ideas nuevas.
+  try {
+    const prompt = `Actúa como un experto coach de carrera y psicólogo especializado en el concepto Ikigai. 
+    Analiza las siguientes respuestas del usuario que incluyen un perfil básico y las 13 áreas del diagrama de Ikigai.
+    
+    Respuestas del usuario:
+    ${JSON.stringify(responses, null, 2)}
+    
+    Tu objetivo es proporcionar un análisis profundo y, sobre todo, RECOMENDAR uno de estos tres caminos profesionales:
+    - 'empleado': Para perfiles que buscan estabilidad, crecimiento dentro de estructuras existentes o especialización técnica.
+    - 'empresario': Para perfiles con visión de escala, gestión de equipos y optimización de negocios ya en marcha.
+    - 'emprendedor': Para perfiles que necesitan crear desde cero, innovar y asumir riesgos altos para validar ideas nuevas.
 
-  Debes devolver un JSON con la siguiente estructura exacta:
-  {
-    "resumen": "Análisis ejecutivo del perfil.",
-    "proposito": "Una frase poderosa (máximo 15 palabras) que sintetice su Ikigai.",
-    "diagnostico": "Análisis de fortalezas y debilidades en el equilibrio vital.",
-    "recomendaciones": ["Pasos concretos para equilibrar su vida."],
-    "caminoRecomendado": "empleado" | "empresario" | "emprendedor",
-    "explicacionCamino": "Por qué este camino es el mejor según sus respuestas básicas y su Ikigai."
-  }
-  
-  IMPORTANTE: Responde SOLO con el JSON.`;
-
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: [{ parts: [{ text: prompt }] }],
-    config: {
-      responseMimeType: "application/json"
+    Debes devolver un JSON con la siguiente estructura exacta:
+    {
+      "resumen": "Análisis ejecutivo del perfil.",
+      "proposito": "Una frase poderosa (máximo 15 palabras) que sintetice su Ikigai.",
+      "diagnostico": "Análisis de fortalezas y debilidades en el equilibrio vital.",
+      "recomendaciones": ["Pasos concretos para equilibrar su vida."],
+      "caminoRecomendado": "empleado" | "empresario" | "emprendedor",
+      "explicacionCamino": "Por qué este camino es el mejor según sus respuestas básicas y su Ikigai."
     }
-  });
+    
+    IMPORTANTE: Responde SOLO con el JSON.`;
 
-  return JSON.parse(response.text || "{}");
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: [{ parts: [{ text: prompt }] }],
+      config: {
+        responseMimeType: "application/json"
+      }
+    });
+
+    const data = JSON.parse(response.text || "{}");
+    if (data.error) throw new Error(data.error);
+    return data;
+  } catch (error: any) {
+    console.error("Error analyzeIkigai:", error);
+    throw new Error("No se pudo completar el análisis de Ikigai. Verifica tu conexión o API Key.");
+  }
 };
 
 const generateIsolatedImage = async (aiInstance: any, itemName: string): Promise<string> => {

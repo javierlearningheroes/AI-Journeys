@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { RoomType, DesignResult, FurnitureItem, ItemCategory } from "../types";
 import { generateRedesign } from "../services/geminiService";
-import { 
+import {
   ArrowLeft, Upload, Loader2, Image as ImageIcon, X, Sparkles, Download, Key, Info, ShoppingBag, Plus, Maximize2, ZoomIn, ZoomOut, ExternalLink, Leaf, Lamp, Palette, Sofa, ReceiptText, Pencil, List
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -32,15 +32,15 @@ export const DecoracionPage: React.FC<DecoracionPageProps> = ({ onBack }) => {
   const [styleDescription, setStyleDescription] = useState('');
   const [isManualStyle, setIsManualStyle] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  
+
   const [designs, setDesigns] = useState<DesignResult[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [activeInfoTab, setActiveInfoTab] = useState<InfoTab>('sobre');
-  
+
   const [showZoom, setShowZoom] = useState<string | null>(null);
   const [zoomScale, setZoomScale] = useState(1);
   const [error, setError] = useState<string | null>(null);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const refInputRef = useRef<HTMLInputElement>(null);
 
@@ -52,7 +52,8 @@ export const DecoracionPage: React.FC<DecoracionPageProps> = ({ onBack }) => {
         const hasKey = await window.aistudio.hasSelectedApiKey();
         setHasApiKey(hasKey as boolean);
       } else {
-        setHasApiKey(!!process.env.API_KEY);
+        const { getGeminiApiKey } = await import("../services/geminiService");
+        setHasApiKey(!!getGeminiApiKey());
       }
     };
     checkKey();
@@ -102,7 +103,7 @@ export const DecoracionPage: React.FC<DecoracionPageProps> = ({ onBack }) => {
   const generatePDF = async () => {
     const current = designs[activeIndex];
     if (!current) return;
-    
+
     const doc = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
     let y = 20;
@@ -126,8 +127,8 @@ export const DecoracionPage: React.FC<DecoracionPageProps> = ({ onBack }) => {
     y += 8;
 
     const imgWidth = 120;
-    const imgHeight = 67.5; 
-    
+    const imgHeight = 67.5;
+
     if (image) {
       doc.setFontSize(10);
       doc.text("Estado Original", 20, y - 2);
@@ -145,15 +146,15 @@ export const DecoracionPage: React.FC<DecoracionPageProps> = ({ onBack }) => {
     y += 15;
 
     const colNames = ["Producto", "Tienda", "Precio", "Dimensiones"];
-    const colWidths = [100, 60, 40, 50]; 
+    const colWidths = [100, 60, 40, 50];
     const startX = 20;
-    
+
     doc.setFillColor(240, 243, 245);
     doc.rect(startX, y, 250, 12, 'F');
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(60, 70, 85);
-    
+
     let currentX = startX + 2;
     colNames.forEach((name, i) => {
       doc.text(name, currentX, y + 8);
@@ -165,28 +166,28 @@ export const DecoracionPage: React.FC<DecoracionPageProps> = ({ onBack }) => {
     doc.setTextColor(40);
     current.furniture.forEach((item) => {
       if (y > 180) { doc.addPage('a4', 'l'); y = 25; }
-      
+
       let rowX = startX + 2;
-      
+
       const nameLines = doc.splitTextToSize(item.name || "-", colWidths[0] - 5);
       doc.setFont("helvetica", "bold");
       doc.text(nameLines, rowX, y + 7);
       rowX += colWidths[0];
-      
+
       doc.setFont("helvetica", "normal");
       doc.text(item.shopName || "Consultar", rowX, y + 7);
       rowX += colWidths[1];
-      
+
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(16, 185, 129); 
+      doc.setTextColor(16, 185, 129);
       doc.text(item.price || "---", rowX, y + 7);
       doc.setTextColor(40);
       rowX += colWidths[2];
-      
+
       doc.setFont("helvetica", "normal");
       const dimLines = doc.splitTextToSize(item.dimensions || "N/A", colWidths[3] - 5);
       doc.text(dimLines, rowX, y + 7);
-      
+
       const rowHeight = Math.max(nameLines.length * 6, dimLines.length * 6, 12);
       y += rowHeight;
       doc.setDrawColor(220, 225, 230);
@@ -229,14 +230,14 @@ export const DecoracionPage: React.FC<DecoracionPageProps> = ({ onBack }) => {
             <X size={32} />
           </button>
           <div className="absolute top-8 left-8 flex gap-4">
-            <button onClick={() => setZoomScale(s => Math.min(5, s + 0.3))} className="bg-white/10 text-white p-3 rounded-2xl hover:bg-white/20"><ZoomIn/></button>
-            <button onClick={() => setZoomScale(s => Math.max(1, s - 0.3))} className="bg-white/10 text-white p-3 rounded-2xl hover:bg-white/20"><ZoomOut/></button>
+            <button onClick={() => setZoomScale(s => Math.min(5, s + 0.3))} className="bg-white/10 text-white p-3 rounded-2xl hover:bg-white/20"><ZoomIn /></button>
+            <button onClick={() => setZoomScale(s => Math.max(1, s - 0.3))} className="bg-white/10 text-white p-3 rounded-2xl hover:bg-white/20"><ZoomOut /></button>
           </div>
           <div className="w-full h-full flex items-center justify-center overflow-auto cursor-grab active:cursor-grabbing">
-            <img 
-              src={showZoom} 
-              style={{ transform: `scale(${zoomScale})` }} 
-              className="max-w-[95vw] max-h-[95vh] transition-transform duration-200 shadow-2xl rounded" 
+            <img
+              src={showZoom}
+              style={{ transform: `scale(${zoomScale})` }}
+              className="max-w-[95vw] max-h-[95vh] transition-transform duration-200 shadow-2xl rounded"
               alt="Zoom"
             />
           </div>
@@ -266,12 +267,12 @@ export const DecoracionPage: React.FC<DecoracionPageProps> = ({ onBack }) => {
               {image ? (
                 <>
                   <img src={image} className="w-full h-full object-cover" alt="Original" />
-                  <button onClick={() => setImage(null)} className="absolute top-4 right-4 p-2 bg-black/50 text-white rounded-full hover:bg-black transition-colors"><X size={16}/></button>
+                  <button onClick={() => setImage(null)} className="absolute top-4 right-4 p-2 bg-black/50 text-white rounded-full hover:bg-black transition-colors"><X size={16} /></button>
                 </>
               ) : (
                 <button onClick={() => fileInputRef.current?.click()} className="w-full h-full flex flex-col items-center justify-center hover:bg-gray-100 transition-colors">
                   <div className="p-4 bg-white rounded-2xl shadow-sm border border-gray-100 mb-2">
-                    <Upload className="w-8 h-8 text-blue-500"/>
+                    <Upload className="w-8 h-8 text-blue-500" />
                   </div>
                   <span className="text-xs font-bold text-slate-500">Subir foto base</span>
                 </button>
@@ -291,27 +292,27 @@ export const DecoracionPage: React.FC<DecoracionPageProps> = ({ onBack }) => {
               <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Estilo de Diseño</label>
               <div className="flex gap-2">
                 {isManualStyle ? (
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     placeholder="Ej: Industrial con toques verdes y madera..."
                     className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none text-sm focus:ring-2 focus:ring-black"
                     onChange={(e) => setStyleDescription(e.target.value)}
                   />
                 ) : (
-                  <select 
-                    onChange={(e) => setStyleDescription(prev => prev ? `${prev}, ${e.target.value}` : e.target.value)} 
+                  <select
+                    onChange={(e) => setStyleDescription(prev => prev ? `${prev}, ${e.target.value}` : e.target.value)}
                     className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none text-sm focus:ring-2 focus:ring-black"
                   >
                     <option value="">Añadir estilo...</option>
                     {POPULAR_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 )}
-                <button 
-                  onClick={() => setIsManualStyle(!isManualStyle)} 
+                <button
+                  onClick={() => setIsManualStyle(!isManualStyle)}
                   className="p-4 bg-gray-50 border border-gray-100 rounded-2xl hover:bg-black hover:text-white transition-all shadow-sm flex items-center justify-center shrink-0"
                   title={isManualStyle ? "Elegir de lista" : "Escribir manualmente"}
                 >
-                  {isManualStyle ? <List size={20}/> : <Pencil size={20}/>}
+                  {isManualStyle ? <List size={20} /> : <Pencil size={20} />}
                 </button>
               </div>
             </div>
@@ -321,23 +322,23 @@ export const DecoracionPage: React.FC<DecoracionPageProps> = ({ onBack }) => {
             <div className="flex justify-between items-center">
               <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Instrucciones Detalladas</label>
               <button onClick={() => refInputRef.current?.click()} className="flex items-center gap-2 text-[10px] font-bold bg-gray-50 border border-gray-100 px-4 py-2 rounded-full hover:bg-black hover:text-white transition-all shadow-sm">
-                <Plus size={14}/> Referencias
+                <Plus size={14} /> Referencias
               </button>
             </div>
-            <textarea 
-              placeholder="Describe texturas, colores específicos o muebles que te gustaría incluir..." 
-              value={styleDescription} 
+            <textarea
+              placeholder="Describe texturas, colores específicos o muebles que te gustaría incluir..."
+              value={styleDescription}
               onChange={e => setStyleDescription(e.target.value)}
               className="w-full p-6 bg-gray-50 border border-gray-100 rounded-3xl h-36 outline-none text-sm resize-none focus:ring-2 focus:ring-black shadow-inner"
             />
             <input type="file" ref={refInputRef} multiple onChange={handleRefUpload} className="hidden" accept="image/*" />
-            
+
             {refImages.length > 0 && (
               <div className="flex flex-wrap gap-2 p-2 bg-gray-50 rounded-2xl border border-gray-100 border-dashed">
                 {refImages.map((ri, i) => (
                   <div key={i} className="relative w-16 h-16 rounded-xl overflow-hidden border border-white shadow-sm group">
                     <img src={ri} className="w-full h-full object-cover" alt="Ref" />
-                    <button onClick={() => setRefImages(prev => prev.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 p-0.5 bg-black/70 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all"><X size={10}/></button>
+                    <button onClick={() => setRefImages(prev => prev.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 p-0.5 bg-black/70 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all"><X size={10} /></button>
                   </div>
                 ))}
               </div>
@@ -356,7 +357,7 @@ export const DecoracionPage: React.FC<DecoracionPageProps> = ({ onBack }) => {
               <div className="relative">
                 <div className="w-20 h-20 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
                 <div className="absolute inset-0 flex items-center justify-center">
-                   <Sparkles className="text-black" size={24}/>
+                  <Sparkles className="text-black" size={24} />
                 </div>
               </div>
               <div className="space-y-2">
@@ -372,25 +373,25 @@ export const DecoracionPage: React.FC<DecoracionPageProps> = ({ onBack }) => {
                     <h3 className="text-2xl font-bold tracking-tight">Diseño Final</h3>
                     <div className="flex gap-1.5 bg-white p-1 rounded-2xl border border-gray-100 w-fit">
                       {designs.map((_, i) => (
-                        <button 
-                          key={i} 
+                        <button
+                          key={i}
                           onClick={() => { setActiveIndex(i); setActiveInfoTab('sobre'); }}
                           className={`px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all ${activeIndex === i ? 'bg-black text-white shadow-md' : 'text-gray-400 hover:text-black hover:bg-gray-100'}`}
                         >
-                          V{i+1}
+                          V{i + 1}
                         </button>
                       ))}
                     </div>
                   </div>
                   <button onClick={generatePDF} className="p-4 bg-white rounded-2xl border border-gray-100 hover:border-black transition-all shadow-md group" title="Descargar Informe PDF">
-                    <Download size={24} className="group-hover:scale-110 transition-transform"/>
+                    <Download size={24} className="group-hover:scale-110 transition-transform" />
                   </button>
                 </div>
 
                 <div className="relative rounded-[2.5rem] overflow-hidden shadow-2xl bg-white border-4 border-white group">
-                  <img 
-                    src={designs[activeIndex].imageUrl} 
-                    className="w-full h-auto cursor-pointer" 
+                  <img
+                    src={designs[activeIndex].imageUrl}
+                    className="w-full h-auto cursor-pointer"
                     onClick={() => setShowZoom(designs[activeIndex].imageUrl)}
                     alt="Resultado"
                   />
@@ -404,20 +405,20 @@ export const DecoracionPage: React.FC<DecoracionPageProps> = ({ onBack }) => {
 
               <div className="flex-1 flex flex-col bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 overflow-hidden min-h-[450px]">
                 <div className="flex flex-wrap gap-6 border-b border-gray-50 mb-6 no-print sticky top-0 bg-white z-10">
-                  <button 
+                  <button
                     onClick={() => setActiveInfoTab('sobre')}
                     className={`pb-3 text-[10px] font-bold uppercase tracking-widest transition-all ${activeInfoTab === 'sobre' ? 'text-black border-b-2 border-black' : 'text-gray-400 hover:text-gray-600'}`}
                   >
                     Sobre este diseño
                   </button>
                   {[
-                    { id: 'mobiliario' as InfoTab, label: 'Mobiliario', icon: <Sofa size={12}/> },
-                    { id: 'decor' as InfoTab, label: 'Decor', icon: <Palette size={12}/> },
-                    { id: 'iluminacion' as InfoTab, label: 'Iluminación', icon: <Lamp size={12}/> },
-                    { id: 'vegetacion' as InfoTab, label: 'Vegetación', icon: <Leaf size={12}/> },
-                    { id: 'presupuesto' as InfoTab, label: 'Presupuesto', icon: <ReceiptText size={12}/> }
+                    { id: 'mobiliario' as InfoTab, label: 'Mobiliario', icon: <Sofa size={12} /> },
+                    { id: 'decor' as InfoTab, label: 'Decor', icon: <Palette size={12} /> },
+                    { id: 'iluminacion' as InfoTab, label: 'Iluminación', icon: <Lamp size={12} /> },
+                    { id: 'vegetacion' as InfoTab, label: 'Vegetación', icon: <Leaf size={12} /> },
+                    { id: 'presupuesto' as InfoTab, label: 'Presupuesto', icon: <ReceiptText size={12} /> }
                   ].map((tab) => (
-                    <button 
+                    <button
                       key={tab.id}
                       onClick={() => setActiveInfoTab(tab.id)}
                       className={`pb-3 text-[10px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${activeInfoTab === tab.id ? 'text-black border-b-2 border-black' : 'text-gray-400 hover:text-gray-600'}`}
@@ -440,37 +441,37 @@ export const DecoracionPage: React.FC<DecoracionPageProps> = ({ onBack }) => {
                     <div className="space-y-6 animate-in fade-in duration-300">
                       {itemsByCategory(
                         activeInfoTab === 'mobiliario' ? 'Mobiliario' :
-                        activeInfoTab === 'decor' ? 'Decoración' :
-                        activeInfoTab === 'iluminacion' ? 'Iluminación' : 'Vegetación'
+                          activeInfoTab === 'decor' ? 'Decoración' :
+                            activeInfoTab === 'iluminacion' ? 'Iluminación' : 'Vegetación'
                       ).map((item, idx) => (
                         <div key={idx} className="bg-slate-50 rounded-[2rem] p-6 flex flex-col md:flex-row gap-6 border border-slate-100 group hover:border-black hover:bg-white transition-all duration-300 shadow-sm">
-                           {item.isolatedImageUrl && (
-                             <div className="w-28 h-28 shrink-0 bg-white rounded-2xl overflow-hidden border border-gray-100 p-2 shadow-inner cursor-pointer" onClick={() => setShowZoom(item.isolatedImageUrl!)}>
-                               <img src={item.isolatedImageUrl} className="w-full h-full object-contain" alt={item.name} />
-                             </div>
-                           )}
-                           <div className="flex-1 space-y-3">
-                             <div className="flex justify-between items-start">
-                               <h5 className="font-bold text-lg text-slate-900">{item.name}</h5>
-                               {item.price && (
-                                 <span className="text-[10px] font-bold bg-white text-emerald-600 px-3 py-1.5 rounded-xl border border-emerald-100 shadow-sm">{item.price}</span>
-                               )}
-                             </div>
-                             <p className="text-xs text-slate-500 font-medium leading-relaxed">{item.description}</p>
-                             <div className="flex flex-wrap gap-2 pt-2">
-                               {(item.links || []).map((link, lidx) => (
-                                 <a 
-                                   key={lidx} 
-                                   href={link.uri} 
-                                   target="_blank" 
-                                   rel="noopener noreferrer" 
-                                   className="text-[9px] font-bold uppercase tracking-wider bg-white text-black px-4 py-2 rounded-xl border border-slate-200 hover:bg-black hover:text-white hover:border-black transition-all flex items-center gap-2 shadow-sm"
-                                 >
-                                   <ExternalLink size={10}/> {item.shopName || "Ver Tienda"}
-                                 </a>
-                               ))}
-                             </div>
-                           </div>
+                          {item.isolatedImageUrl && (
+                            <div className="w-28 h-28 shrink-0 bg-white rounded-2xl overflow-hidden border border-gray-100 p-2 shadow-inner cursor-pointer" onClick={() => setShowZoom(item.isolatedImageUrl!)}>
+                              <img src={item.isolatedImageUrl} className="w-full h-full object-contain" alt={item.name} />
+                            </div>
+                          )}
+                          <div className="flex-1 space-y-3">
+                            <div className="flex justify-between items-start">
+                              <h5 className="font-bold text-lg text-slate-900">{item.name}</h5>
+                              {item.price && (
+                                <span className="text-[10px] font-bold bg-white text-emerald-600 px-3 py-1.5 rounded-xl border border-emerald-100 shadow-sm">{item.price}</span>
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-500 font-medium leading-relaxed">{item.description}</p>
+                            <div className="flex flex-wrap gap-2 pt-2">
+                              {(item.links || []).map((link, lidx) => (
+                                <a
+                                  key={lidx}
+                                  href={link.uri}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[9px] font-bold uppercase tracking-wider bg-white text-black px-4 py-2 rounded-xl border border-slate-200 hover:bg-black hover:text-white hover:border-black transition-all flex items-center gap-2 shadow-sm"
+                                >
+                                  <ExternalLink size={10} /> {item.shopName || "Ver Tienda"}
+                                </a>
+                              ))}
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -478,15 +479,15 @@ export const DecoracionPage: React.FC<DecoracionPageProps> = ({ onBack }) => {
 
                   {activeInfoTab === 'presupuesto' && (
                     <div className="space-y-10 animate-in fade-in duration-300">
-                       <div className="bg-black text-white p-10 rounded-[2.5rem] shadow-xl flex flex-col md:flex-row items-center justify-between gap-8">
-                          <div>
-                            <h4 className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-2">Inversión Estimada</h4>
-                            <p className="text-5xl font-bold tracking-tighter">{designs[activeIndex].totalEstimatedBudget}</p>
-                          </div>
-                          <div className="text-right text-gray-500 text-xs max-w-xs leading-relaxed">
-                             Precios calculados mediante búsqueda dinámica de productos similares en el mercado retail actual.
-                          </div>
-                       </div>
+                      <div className="bg-black text-white p-10 rounded-[2.5rem] shadow-xl flex flex-col md:flex-row items-center justify-between gap-8">
+                        <div>
+                          <h4 className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-2">Inversión Estimada</h4>
+                          <p className="text-5xl font-bold tracking-tighter">{designs[activeIndex].totalEstimatedBudget}</p>
+                        </div>
+                        <div className="text-right text-gray-500 text-xs max-w-xs leading-relaxed">
+                          Precios calculados mediante búsqueda dinámica de productos similares en el mercado retail actual.
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -495,7 +496,7 @@ export const DecoracionPage: React.FC<DecoracionPageProps> = ({ onBack }) => {
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-center space-y-8 opacity-20">
               <div className="p-10 bg-white rounded-[3.5rem] shadow-sm">
-                <Sparkles className="w-16 h-16 text-slate-400"/>
+                <Sparkles className="w-16 h-16 text-slate-400" />
               </div>
               <div className="space-y-3">
                 <p className="text-3xl font-bold tracking-tight">Tu Espacio Ideal</p>
