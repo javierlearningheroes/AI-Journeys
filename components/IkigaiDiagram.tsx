@@ -20,7 +20,7 @@ export const IkigaiDiagram: React.FC<IkigaiDiagramProps> = ({ activeSection, onS
   const [tooltip, setTooltip] = useState({ text: "", x: 0, y: 0, visible: false });
   const [canvasSize, setCanvasSize] = useState({ width: 600, height: 600 });
   const [baseImageData, setBaseImageData] = useState<ImageData | null>(null);
-  
+
   const circles: Circle[] = [
     { id: "love", cx: 200, cy: 200, r: 200, color: "rgba(255, 111, 145, 0.6)", label: "Lo que amas" },
     { id: "skill", cx: 400, cy: 200, r: 200, color: "rgba(77, 171, 247, 0.6)", label: "En lo que eres bueno" },
@@ -48,6 +48,7 @@ export const IkigaiDiagram: React.FC<IkigaiDiagramProps> = ({ activeSection, onS
   };
 
   const createBaseDiagram = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+    const dpr = window.devicePixelRatio || 1;
     ctx.clearRect(0, 0, width, height);
     circles.forEach((circle) => {
       ctx.beginPath();
@@ -57,7 +58,7 @@ export const IkigaiDiagram: React.FC<IkigaiDiagramProps> = ({ activeSection, onS
       ctx.fillStyle = circle.color;
       ctx.fill();
     });
-    return ctx.getImageData(0, 0, width, height);
+    return ctx.getImageData(0, 0, width * dpr, height * dpr);
   };
 
   useEffect(() => {
@@ -76,18 +77,25 @@ export const IkigaiDiagram: React.FC<IkigaiDiagramProps> = ({ activeSection, onS
   }, [canvasSize]);
 
   useEffect(() => {
-    const handleResize = () => {
-      if (canvasRef.current) {
-        const container = canvasRef.current.parentElement;
-        if (container) {
-          const size = Math.min(container.clientWidth, 600);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const container = canvas.parentElement;
+    if (!container) return;
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        // Use contentRect to exclude padding and ensure the diagram fits
+        const { width, height } = entry.contentRect;
+        const size = Math.min(width, height, 600);
+        if (size > 0) {
           setCanvasSize({ width: size, height: size });
         }
       }
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    });
+
+    observer.observe(container);
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -95,22 +103,24 @@ export const IkigaiDiagram: React.FC<IkigaiDiagramProps> = ({ activeSection, onS
     if (!canvas || !baseImageData) return;
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
-    
+    const dpr = window.devicePixelRatio || 1;
+
     if (activeSection === 'basic' || !activeSection) {
       ctx.putImageData(baseImageData, 0, 0);
       return;
     }
-    
+
     const width = canvasSize.width;
     const height = canvasSize.height;
     ctx.putImageData(baseImageData, 0, 0);
-    const imgData = ctx.getImageData(0, 0, width, height);
+
+    const imgData = ctx.getImageData(0, 0, width * dpr, height * dpr);
     const data = imgData.data;
     for (let i = 0; i < data.length; i += 4) {
-      data[i+3] = Math.floor(data[i+3] * 0.3);
+      data[i + 3] = Math.floor(data[i + 3] * 0.3);
     }
     ctx.putImageData(imgData, 0, 0);
-    
+
     if (activeSection.includes('-')) {
       highlightIntersection(ctx, width, height, activeSection);
     } else {
@@ -120,25 +130,32 @@ export const IkigaiDiagram: React.FC<IkigaiDiagramProps> = ({ activeSection, onS
   }, [activeSection, baseImageData, canvasSize]);
 
   const highlightCircle = (ctx: CanvasRenderingContext2D, width: number, height: number, circle: Circle) => {
+    const dpr = window.devicePixelRatio || 1;
     const scaleW = width / 600;
     const scaleH = height / 600;
-    const imageData = ctx.getImageData(0, 0, width, height);
+    const imageData = ctx.getImageData(0, 0, width * dpr, height * dpr);
     const data = imageData.data;
     const radius = circle.r * Math.min(scaleW, scaleH);
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const distanceToSelected = Math.hypot(x - circle.cx * scaleW, y - circle.cy * scaleH);
+    const physicalWidth = width * dpr;
+    const physicalHeight = height * dpr;
+
+    for (let y = 0; y < physicalHeight; y++) {
+      for (let x = 0; x < physicalWidth; x++) {
+        const logicalX = x / dpr;
+        const logicalY = y / dpr;
+        const distanceToSelected = Math.hypot(logicalX - circle.cx * scaleW, logicalY - circle.cy * scaleH);
+
         if (distanceToSelected <= radius) {
           let isInOtherCircle = false;
           for (const otherCircle of circles) {
             if (otherCircle.id === circle.id) continue;
-            if (Math.hypot(x - otherCircle.cx * scaleW, y - otherCircle.cy * scaleH) <= otherCircle.r * Math.min(scaleW, scaleH)) {
+            if (Math.hypot(logicalX - otherCircle.cx * scaleW, logicalY - otherCircle.cy * scaleH) <= otherCircle.r * Math.min(scaleW, scaleH)) {
               isInOtherCircle = true;
               break;
             }
           }
           if (!isInOtherCircle) {
-            const idx = (y * width + x) * 4;
+            const idx = (y * physicalWidth + x) * 4;
             if (data[idx + 3] > 0) data[idx + 3] = 255;
           }
         }
@@ -148,32 +165,40 @@ export const IkigaiDiagram: React.FC<IkigaiDiagramProps> = ({ activeSection, onS
   };
 
   const highlightIntersection = (ctx: CanvasRenderingContext2D, width: number, height: number, intersection: string) => {
+    const dpr = window.devicePixelRatio || 1;
     const intersectionIds = intersection.split('-');
     const intersectionCircles = circles.filter(c => intersectionIds.includes(c.id));
     const scaleW = width / 600;
     const scaleH = height / 600;
-    const imageData = ctx.getImageData(0, 0, width, height);
+    const imageData = ctx.getImageData(0, 0, width * dpr, height * dpr);
     const data = imageData.data;
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
+    const physicalWidth = width * dpr;
+    const physicalHeight = height * dpr;
+
+    for (let y = 0; y < physicalHeight; y++) {
+      for (let x = 0; x < physicalWidth; x++) {
+        const logicalX = x / dpr;
+        const logicalY = y / dpr;
         let inAllIntersectionCircles = true;
         let inOtherCircle = false;
+
         for (const circle of intersectionCircles) {
-          if (Math.hypot(x - circle.cx * scaleW, y - circle.cy * scaleH) > circle.r * Math.min(scaleW, scaleH)) {
+          if (Math.hypot(logicalX - circle.cx * scaleW, logicalY - circle.cy * scaleH) > circle.r * Math.min(scaleW, scaleH)) {
             inAllIntersectionCircles = false;
             break;
           }
         }
+
         if (inAllIntersectionCircles) {
           for (const circle of circles) {
             if (intersectionIds.includes(circle.id)) continue;
-            if (Math.hypot(x - circle.cx * scaleW, y - circle.cy * scaleH) <= circle.r * Math.min(scaleW, scaleH)) {
+            if (Math.hypot(logicalX - circle.cx * scaleW, logicalY - circle.cy * scaleH) <= circle.r * Math.min(scaleW, scaleH)) {
               inOtherCircle = true;
               break;
             }
           }
           if (!inOtherCircle || intersectionIds.length === 4) {
-            const idx = (y * width + x) * 4;
+            const idx = (y * physicalWidth + x) * 4;
             if (data[idx + 3] > 0) data[idx + 3] = 255;
           }
         }
@@ -209,7 +234,7 @@ export const IkigaiDiagram: React.FC<IkigaiDiagramProps> = ({ activeSection, onS
   const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => onSectionClick(getSectionAt(e.clientX, e.clientY));
 
   return (
-    <div className="ikigai-container relative">
+    <div className="ikigai-container relative w-full h-full flex items-center justify-center">
       <canvas
         ref={canvasRef}
         width={canvasSize.width}
@@ -220,11 +245,11 @@ export const IkigaiDiagram: React.FC<IkigaiDiagramProps> = ({ activeSection, onS
         className="ikigai-canvas max-w-full"
       />
       {tooltip.visible && (
-        <div 
+        <div
           className="ikigai-tooltip animate-in fade-in duration-200"
-          style={{ 
+          style={{
             position: "fixed",
-            left: `${tooltip.x + 10}px`, 
+            left: `${tooltip.x + 10}px`,
             top: `${tooltip.y + 10}px`,
             background: "rgba(15, 23, 42, 0.95)",
             // Corrected backdropBlur to backdropFilter as backdropBlur is not a standard React CSS property

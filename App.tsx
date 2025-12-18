@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { DestinationCard } from "./components/ui/card-21";
 import { EmpleadoPage } from "./components/EmpleadoPage";
@@ -71,15 +70,15 @@ const App = () => {
   const handleCardClick = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     setTransitioningId(id);
-    
+
     // 1. Animación inicial de la tarjeta al centro (1000ms definidos en CSS)
     // 2. Espera en el centro (añadimos 1s extra a los 800ms previos -> 1800ms en el centro)
     // Total tiempo antes de empezar a desvanecer la escena: 2800ms
-    
+
     setTimeout(() => {
       // Empezamos a desvanecer toda la pantalla antes del cambio de vista
       setIsFadingOut(true);
-      
+
       // Esperamos a que el desvanecimiento termine (400ms adicionales)
       setTimeout(() => {
         if (id === "vida") setCurrentView("vida");
@@ -87,11 +86,11 @@ const App = () => {
         else if (id === "empleado") setCurrentView("empleado");
         else if (id === "empresario") setCurrentView("empresario");
         else if (id === "emprendedor") setCurrentView("emprendedor");
-        
+
         // Reset states para la nueva página
         setTransitioningId(null);
         setIsFadingOut(false);
-      }, 400); 
+      }, 400);
     }, 2800);
   };
 
@@ -123,13 +122,13 @@ const App = () => {
     <div className={`min-h-screen w-full bg-white flex flex-col transition-opacity duration-500 ${isFadingOut ? 'opacity-0' : 'opacity-100'}`}>
       <header className={`px-6 py-4 flex items-center justify-between transition-all duration-1000 bg-gradient-to-l from-black/10 via-white/50 to-white ${transitioningId ? 'opacity-0' : 'opacity-100'}`}>
         <div className="w-10"></div>
-        <img 
-          src={logoUrl} 
-          className="h-10 md:h-12 w-auto invert brightness-0" 
-          alt="Learning Heroes" 
+        <img
+          src={logoUrl}
+          className="h-10 md:h-12 w-auto invert brightness-0"
+          alt="Learning Heroes"
         />
       </header>
-      
+
       <div className="flex-1 flex flex-col items-center justify-center p-8 overflow-hidden">
         <header className={`mb-12 text-center max-w-2xl transition-all duration-1000 ${transitioningId ? 'opacity-0 -translate-y-10' : 'opacity-100'}`}>
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900 mb-4">

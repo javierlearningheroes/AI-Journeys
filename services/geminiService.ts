@@ -4,7 +4,7 @@ import { GoogleGenAI, Type, Part } from "@google/genai";
 import * as mammoth from "mammoth";
 // @ts-ignore
 import * as XLSX from "xlsx";
-import { 
+import {
   RoomType,
   DesignResult,
   FurnitureItem,
@@ -19,7 +19,23 @@ import {
   StrategicPlan
 } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const getAI = () => {
+  const key = process.env.API_KEY || process.env.GEMINI_API_KEY || "";
+  if (!key) {
+    console.warn("GEMINI_API_KEY is not set. AI features will not work.");
+  }
+  return new GoogleGenAI({ apiKey: key });
+};
+
+// Initial instance - safely created
+let ai: any;
+try {
+  ai = getAI();
+} catch (e) {
+  console.error("Failed to initialize GoogleGenAI:", e);
+  // Create a dummy object to avoid top-level crashes
+  ai = { models: { generateContent: async () => ({ text: "{}" }) } };
+}
 
 // --- UTILS ---
 
@@ -52,7 +68,7 @@ const fileToPart = async (file: File): Promise<Part> => {
 
   // 2. Excel - Parse to CSV/Text
   if (
-    mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
+    mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
     mimeType === 'application/vnd.ms-excel' ||
     file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv')
   ) {
@@ -63,7 +79,7 @@ const fileToPart = async (file: File): Promise<Part> => {
           const data = e.target?.result;
           const workbook = XLSX.read(data, { type: 'array' });
           let text = `DOCUMENT: ${file.name}\nTYPE: Excel Spreadsheet\nCONTENT:\n`;
-          
+
           workbook.SheetNames.forEach((sheetName: string) => {
             const sheet = workbook.Sheets[sheetName];
             const csv = XLSX.utils.sheet_to_csv(sheet);
@@ -85,7 +101,7 @@ const fileToPart = async (file: File): Promise<Part> => {
 
   // 3. Word - Parse to Text
   if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.name.endsWith('.docx')) {
-     return new Promise((resolve, reject) => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = async (e) => {
         try {
@@ -105,7 +121,7 @@ const fileToPart = async (file: File): Promise<Part> => {
 
   // 4. Text/JSON/Markdown - Read as Text
   if (mimeType.startsWith('text/') || mimeType === 'application/json' || file.name.endsWith('.md') || file.name.endsWith('.txt')) {
-     return new Promise((resolve, reject) => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const content = e.target?.result as string;
@@ -115,17 +131,17 @@ const fileToPart = async (file: File): Promise<Part> => {
       reader.readAsText(file);
     });
   }
-  
+
   // Fallback for unknown types
   return new Promise((resolve, reject) => {
-      console.warn(`Unsupported file type: ${mimeType}. Trying to read as text.`);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = e.target?.result as string;
-        resolve({ text: `DOCUMENT: ${file.name}\nCONTENT (Raw):\n${content}` });
-      };
-      reader.onerror = reject;
-      reader.readAsText(file);
+    console.warn(`Unsupported file type: ${mimeType}. Trying to read as text.`);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      resolve({ text: `DOCUMENT: ${file.name}\nCONTENT (Raw):\n${content}` });
+    };
+    reader.onerror = reject;
+    reader.readAsText(file);
   });
 };
 
@@ -173,7 +189,7 @@ const generateIsolatedImage = async (aiInstance: any, itemName: string): Promise
     contents: { parts: [{ text: prompt }] },
     config: { imageConfig: { aspectRatio: "1:1" } }
   });
-  
+
   for (const part of response.candidates[0].content.parts) {
     if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
   }
@@ -181,8 +197,8 @@ const generateIsolatedImage = async (aiInstance: any, itemName: string): Promise
 };
 
 export const generateRedesign = async (
-  image: string, 
-  roomType: RoomType, 
+  image: string,
+  roomType: RoomType,
   styleDescription: string,
   referenceImages: string[] = []
 ): Promise<DesignResult> => {
@@ -239,10 +255,10 @@ export const generateRedesign = async (
 
   const fullText = searchResponse.text || "Diseño completado.";
   let furniture: FurnitureItem[] = [];
-  
+
   const parts = fullText.split("FURNITURE_DATA:");
   const cleanedDescription = parts[0].trim();
-  
+
   if (parts.length > 1) {
     try {
       const jsonStr = parts[1].trim();
@@ -277,7 +293,7 @@ export const generateRedesign = async (
       if (matches && matches.length > 0) {
         // Convert to numbers, replacing comma with dot if European format
         const numbers = matches.map(n => parseFloat(n.replace(',', '.')));
-        
+
         if (numbers.length === 1) {
           // Single price
           minTotal += numbers[0];
@@ -292,8 +308,8 @@ export const generateRedesign = async (
   });
 
   // Format the total string
-  const totalBudgetStr = minTotal === maxTotal 
-    ? `${Math.round(minTotal)}€` 
+  const totalBudgetStr = minTotal === maxTotal
+    ? `${Math.round(minTotal)}€`
     : `${Math.round(minTotal)}€ - ${Math.round(maxTotal)}€`;
 
   return {
@@ -315,7 +331,7 @@ export const generateGroceryList = async (diet: DietType, preferences: string): 
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: [{ parts: [{ text: prompt }] }],
-    config: { 
+    config: {
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -351,7 +367,8 @@ export const generateGroceryList = async (diet: DietType, preferences: string): 
 
 export const suggestRecipes = async (ingredients: string, image?: string): Promise<RecipeResponse> => {
   const parts: Part[] = [
-    { text: `Actúa como un chef profesional creativo experto en cocina de aprovechamiento. 
+    {
+      text: `Actúa como un chef profesional creativo experto en cocina de aprovechamiento. 
     ${ingredients ? `El usuario dice tener estos ingredientes: "${ingredients}".` : ""}
     ${image ? "Analiza la imagen de la nevera/despensa adjunta para identificar TODOS los ingredientes visibles." : ""}
     
@@ -370,7 +387,7 @@ export const suggestRecipes = async (ingredients: string, image?: string): Promi
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: [{ parts }],
-    config: { 
+    config: {
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -389,13 +406,13 @@ export const suggestRecipes = async (ingredients: string, image?: string): Promi
                 description: { type: Type.STRING },
                 time: { type: Type.STRING },
                 difficulty: { type: Type.STRING },
-                ingredients: { 
-                  type: Type.ARRAY, 
-                  items: { type: Type.STRING } 
+                ingredients: {
+                  type: Type.ARRAY,
+                  items: { type: Type.STRING }
                 },
-                instructions: { 
-                  type: Type.ARRAY, 
-                  items: { type: Type.STRING } 
+                instructions: {
+                  type: Type.ARRAY,
+                  items: { type: Type.STRING }
                 }
               },
               required: ["title", "description", "time", "difficulty", "ingredients", "instructions"]
@@ -525,7 +542,8 @@ export const optimizeCV = async (jobDescription: string, cvFile: File): Promise<
 export const analyzeBusiness = async (files: UploadedFile[], urls: string[], context: string): Promise<BusinessAnalysisResult> => {
   const parts: Part[] = [];
 
-  parts.push({ text: `Actúa como un consultor estratégico de negocios experto (nivel MBB - McKinsey/Bain/BCG).
+  parts.push({
+    text: `Actúa como un consultor estratégico de negocios experto (nivel MBB - McKinsey/Bain/BCG).
   Analiza la siguiente información del negocio (contexto, documentos y urls) para generar un plan de crecimiento PROFUNDO y EXTENSO.
   
   CONTEXTO DEL NEGOCIO: "${context}"
@@ -639,7 +657,7 @@ export const analyzeBusiness = async (files: UploadedFile[], urls: string[], con
       }
     }
   });
-  
+
   return JSON.parse(response.text || "{}");
 };
 
