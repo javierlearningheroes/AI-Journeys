@@ -20,7 +20,18 @@ import {
 } from "../types";
 
 export const getGeminiApiKey = () => {
-  return process.env.GEMINI_API_KEY || process.env.API_KEY || "";
+  // Try all possible sources for the API key
+  return (
+    import.meta.env.VITE_GEMINI_API_KEY ||
+    import.meta.env.VITE_GOOGLE_API_KEY ||
+    import.meta.env.VITE_API_KEY ||
+    process.env.VITE_GEMINI_API_KEY ||
+    process.env.GEMINI_API_KEY ||
+    process.env.VITE_GOOGLE_API_KEY ||
+    process.env.GOOGLE_API_KEY ||
+    process.env.API_KEY ||
+    ""
+  );
 };
 
 const getAI = () => {
